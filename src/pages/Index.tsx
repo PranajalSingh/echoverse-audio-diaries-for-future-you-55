@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AudioRecorder } from "../components/AudioRecorder";
 import { TimelineView } from "../components/TimelineView";
@@ -57,6 +56,11 @@ const Index = () => {
       audioUrl: null,
     }
   ]);
+
+  const currentUser = {
+    name: "John Doe",
+    email: "john@example.com"
+  };
 
   // Check for newly unlocked entries on component mount
   useEffect(() => {
@@ -121,6 +125,12 @@ const Index = () => {
     );
   };
 
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    // Clear any stored data if needed
+    localStorage.removeItem('lastVisit');
+  };
+
   const filteredEntries = timeCapsuleMode 
     ? entries.filter(entry => {
         const oneYearFromCreation = new Date(entry.recordedDate);
@@ -141,6 +151,8 @@ const Index = () => {
         <Header 
           onNewEntry={() => setShowNewEntry(true)}
           onSettings={() => setShowSettings(true)}
+          onLogout={handleLogout}
+          currentUser={currentUser}
         />
         
         {newlyUnlockedEntries.length > 0 && (
