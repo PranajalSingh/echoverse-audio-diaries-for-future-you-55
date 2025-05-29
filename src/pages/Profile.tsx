@@ -1,3 +1,4 @@
+
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,25 +7,38 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Headphones, User } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { UserDataManager } from "../utils/userDataManager";
+import { useEffect, useState } from "react";
 
 const Profile = () => {
-  const currentUser = {
-    name: "John Doe",
-    email: "john@example.com",
-    avatar: undefined, // Add the missing avatar property
-    joinDate: "January 2024",
-    totalEntries: 12,
-    unlockedEntries: 8
-  };
+  const { user, logout } = useAuth();
+  const [totalEntries, setTotalEntries] = useState(0);
+  const [unlockedEntries, setUnlockedEntries] = useState(0);
 
-  const handleLogout = () => {
-    console.log("Logout clicked");
-  };
+  useEffect(() => {
+    if (user) {
+      const entries = UserDataManager.getUserEntries(user.id);
+      setTotalEntries(entries.length);
+      setUnlockedEntries(entries.filter(entry => entry.isUnlocked).length);
+    }
+  }, [user]);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Profile saved");
   };
+
+  const formatJoinDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long'
+    });
+  };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
@@ -32,8 +46,8 @@ const Profile = () => {
         <Header 
           onNewEntry={() => {}}
           onSettings={() => {}}
-          onLogout={handleLogout}
-          currentUser={currentUser}
+          onLogout={logout}
+          currentUser={user}
         />
         
         <main className="mt-8">
@@ -48,34 +62,34 @@ const Profile = () => {
                 <CardHeader className="text-center">
                   <div className="flex justify-center mb-4">
                     <Avatar className="h-24 w-24">
-                      <AvatarImage src={currentUser?.avatar} alt={currentUser?.name} />
+                      <AvatarImage src={undefined} alt={user.name} />
                       <AvatarFallback className="bg-purple-600 text-white text-2xl">
-                        {currentUser?.name?.charAt(0).toUpperCase()}
+                        {user.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </div>
-                  <CardTitle className="text-xl">{currentUser.name}</CardTitle>
-                  <p className="text-purple-200">{currentUser.email}</p>
+                  <CardTitle className="text-xl">{user.name}</CardTitle>
+                  <p className="text-purple-200">{user.email}</p>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-purple-200">Member since:</span>
                     <Badge variant="secondary" className="bg-purple-600 text-white">
-                      {currentUser.joinDate}
+                      {formatJoinDate(user.createdAt)}
                     </Badge>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <Headphones className="w-5 h-5 text-purple-300" />
-                      <span className="text-purple-200">Total Entries: {currentUser.totalEntries}</span>
+                      <span className="text-purple-200">Total Entries: {totalEntries}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-purple-300" />
-                      <span className="text-purple-200">Unlocked: {currentUser.unlockedEntries}</span>
+                      <span className="text-purple-200">Unlocked: {unlockedEntries}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Clock className="w-5 h-5 text-purple-300" />
-                      <span className="text-purple-200">Locked: {currentUser.totalEntries - currentUser.unlockedEntries}</span>
+                      <span className="text-purple-200">Locked: {totalEntries - unlockedEntries}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -99,7 +113,7 @@ const Profile = () => {
                         </label>
                         <Input
                           id="firstName"
-                          defaultValue="John"
+                          defaultValue={user.name.split(' ')[0] || ''}
                           className="bg-white/10 border-white/20 text-white"
                         />
                       </div>
@@ -109,7 +123,7 @@ const Profile = () => {
                         </label>
                         <Input
                           id="lastName"
-                          defaultValue="Doe"
+                          defaultValue={user.name.split(' ').slice(1).join(' ') || ''}
                           className="bg-white/10 border-white/20 text-white"
                         />
                       </div>
@@ -121,7 +135,7 @@ const Profile = () => {
                       <Input
                         id="email"
                         type="email"
-                        defaultValue={currentUser.email}
+                        defaultValue={user.email}
                         className="bg-white/10 border-white/20 text-white"
                       />
                     </div>

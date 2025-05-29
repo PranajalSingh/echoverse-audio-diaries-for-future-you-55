@@ -5,59 +5,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { BarChart3, Calendar, Clock, Headphones, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-interface Entry {
-  id: string;
-  title: string;
-  mood: string;
-  recordedDate: string;
-  unlockDate: string;
-  isUnlocked: boolean;
-  audioUrl: string | null;
-  audioBlob?: Blob;
-  reflection?: string;
-}
+import { useAuth } from "../contexts/AuthContext";
+import { UserDataManager } from "../utils/userDataManager";
+import type { Entry } from "./Index";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const getCurrentUser = () => {
-    const userEmail = localStorage.getItem('userEmail');
-    const userName = localStorage.getItem('userName');
-    return {
-      name: userName || "User",
-      email: userEmail || "user@example.com"
-    };
-  };
-
-  const [currentUser, setCurrentUser] = useState(getCurrentUser());
 
   useEffect(() => {
-    const authStatus = localStorage.getItem('isAuthenticated') === 'true';
-    setIsAuthenticated(authStatus);
-    
-    if (!authStatus) {
-      navigate('/');
-      return;
+    if (user) {
+      const userEntries = UserDataManager.getUserEntries(user.id);
+      setEntries(userEntries);
     }
-
-    // Load user entries
-    const savedEntries = localStorage.getItem('userEntries');
-    if (savedEntries) {
-      setEntries(JSON.parse(savedEntries));
-    }
-
-    setCurrentUser(getCurrentUser());
-  }, [navigate]);
+  }, [user]);
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('lastVisit');
-    localStorage.removeItem('userEntries');
+    logout();
     navigate('/');
   };
 
@@ -65,7 +30,7 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null;
   }
 
@@ -151,7 +116,7 @@ const Dashboard = () => {
           onNewEntry={handleGoHome}
           onSettings={() => {}}
           onLogout={handleLogout}
-          currentUser={currentUser}
+          currentUser={user}
         />
         
         <main className="mt-8">

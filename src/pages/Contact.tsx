@@ -1,20 +1,13 @@
-
 import { Header } from "../components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Mail, MessageSquare, Phone, MapPin } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 const Contact = () => {
-  const currentUser = {
-    name: "John Doe",
-    email: "john@example.com"
-  };
-
-  const handleLogout = () => {
-    console.log("Logout clicked");
-  };
+  const { user, logout } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +21,8 @@ const Contact = () => {
         <Header 
           onNewEntry={() => {}}
           onSettings={() => {}}
-          onLogout={handleLogout}
-          currentUser={currentUser}
+          onLogout={logout}
+          currentUser={user || { name: "User", email: "user@example.com" }}
         />
         
         <main className="mt-8">
@@ -56,6 +49,7 @@ const Contact = () => {
                         <Input
                           id="name"
                           placeholder="Your name"
+                          defaultValue={user?.name || ""}
                           className="bg-white/10 border-white/20 text-white placeholder:text-purple-300"
                         />
                       </div>
@@ -67,6 +61,7 @@ const Contact = () => {
                           id="email"
                           type="email"
                           placeholder="your@email.com"
+                          defaultValue={user?.email || ""}
                           className="bg-white/10 border-white/20 text-white placeholder:text-purple-300"
                         />
                       </div>
