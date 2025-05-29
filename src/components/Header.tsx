@@ -1,12 +1,13 @@
 
 import { Button } from "@/components/ui/button";
-import { Plus, Headphones, User } from "lucide-react";
+import { Plus, Headphones, User, Settings } from "lucide-react";
 
 interface HeaderProps {
   onNewEntry: () => void;
+  onSettings: () => void;
 }
 
-export const Header = ({ onNewEntry }: HeaderProps) => {
+export const Header = ({ onNewEntry, onSettings }: HeaderProps) => {
   return (
     <header className="flex items-center justify-between py-4">
       <div className="flex items-center gap-3">
@@ -26,6 +27,15 @@ export const Header = ({ onNewEntry }: HeaderProps) => {
         >
           <Plus className="w-4 h-4" />
           New Entry
+        </Button>
+        
+        <Button
+          onClick={onSettings}
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-white/10"
+        >
+          <Settings className="w-5 h-5" />
         </Button>
         
         <Button

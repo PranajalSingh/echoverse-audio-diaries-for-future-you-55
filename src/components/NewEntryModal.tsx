@@ -4,33 +4,47 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AudioRecorder } from "./AudioRecorder";
 import { CalendarIcon } from "lucide-react";
+import type { Entry } from "../pages/Index";
 
 interface NewEntryModalProps {
   onClose: () => void;
-  onSave: (entry: any) => void;
+  onSave: (entry: Omit<Entry, 'id'>) => void;
 }
+
+const MOOD_OPTIONS = [
+  { emoji: "😄", label: "Excited" },
+  { emoji: "😌", label: "Calm" },
+  { emoji: "😢", label: "Sad" },
+  { emoji: "😡", label: "Angry" },
+  { emoji: "😍", label: "Love" },
+  { emoji: "🤔", label: "Thoughtful" },
+  { emoji: "😴", label: "Tired" },
+  { emoji: "✨", label: "Hopeful" },
+  { emoji: "😰", label: "Anxious" },
+  { emoji: "🥳", label: "Celebratory" },
+];
 
 export const NewEntryModal = ({ onClose, onSave }: NewEntryModalProps) => {
   const [title, setTitle] = useState("");
-  const [mood, setMood] = useState("");
+  const [selectedMood, setSelectedMood] = useState("");
   const [unlockDate, setUnlockDate] = useState("");
-  const [audioRecorded, setAudioRecorded] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
   const handleSave = () => {
-    if (!title || !mood || !unlockDate || !audioRecorded) {
+    if (!title || !selectedMood || !unlockDate || !audioBlob) {
       return;
     }
 
-    const entry = {
+    const entry: Omit<Entry, 'id'> = {
       title,
-      mood,
+      mood: selectedMood,
       recordedDate: new Date().toISOString().split('T')[0],
       unlockDate,
-      isUnlocked: false,
+      isUnlocked: new Date(unlockDate) <= new Date(),
       audioUrl: null,
+      audioBlob,
     };
 
     onSave(entry);
@@ -58,19 +72,27 @@ export const NewEntryModal = ({ onClose, onSave }: NewEntryModalProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mood">Current Mood</Label>
-            <Select value={mood} onValueChange={setMood}>
-              <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                <SelectValue placeholder="How are you feeling?" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-white/20">
-                <SelectItem value="excited">Excited</SelectItem>
-                <SelectItem value="nostalgic">Nostalgic</SelectItem>
-                <SelectItem value="hopeful">Hopeful</SelectItem>
-                <SelectItem value="reflective">Reflective</SelectItem>
-                <SelectItem value="grateful">Grateful</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Current Mood</Label>
+            <div className="grid grid-cols-5 gap-2">
+              {MOOD_OPTIONS.map((mood) => (
+                <Button
+                  key={mood.emoji}
+                  variant="ghost"
+                  onClick={() => setSelectedMood(mood.emoji)}
+                  className={`h-12 text-2xl hover:bg-white/10 ${
+                    selectedMood === mood.emoji ? 'bg-purple-600' : 'bg-white/5'
+                  }`}
+                  title={mood.label}
+                >
+                  {mood.emoji}
+                </Button>
+              ))}
+            </div>
+            {selectedMood && (
+              <p className="text-sm text-purple-200 text-center">
+                {MOOD_OPTIONS.find(m => m.emoji === selectedMood)?.label}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -86,11 +108,20 @@ export const NewEntryModal = ({ onClose, onSave }: NewEntryModalProps) => {
               />
               <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-200 pointer-events-none" />
             </div>
+            {unlockDate && (
+              <p className="text-sm text-purple-200">
+                You'll meet this voice again on {new Date(unlockDate).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label>Record Your Message</Label>
-            <AudioRecorder onRecordingComplete={() => setAudioRecorded(true)} />
+            <AudioRecorder onRecordingComplete={setAudioBlob} />
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -103,7 +134,7 @@ export const NewEntryModal = ({ onClose, onSave }: NewEntryModalProps) => {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!title || !mood || !unlockDate || !audioRecorded}
+              disabled={!title || !selectedMood || !unlockDate || !audioBlob}
               className="flex-1 bg-purple-600 hover:bg-purple-700"
             >
               Save Entry

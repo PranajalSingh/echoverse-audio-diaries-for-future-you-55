@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Mic, Square, Play, Pause } from "lucide-react";
 
 interface AudioRecorderProps {
-  onRecordingComplete: () => void;
+  onRecordingComplete: (audioBlob: Blob) => void;
 }
 
 export const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
@@ -12,11 +12,37 @@ export const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasRecording, setHasRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        setHasRecording(true);
+        onRecordingComplete(blob);
+        
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorderRef.current.start();
       setIsRecording(true);
       setRecordingTime(0);
       
@@ -24,30 +50,36 @@ export const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
       
-      // Simulate recording for demo
-      console.log("Recording started...");
     } catch (error) {
       console.error("Error accessing microphone:", error);
     }
   };
 
   const stopRecording = () => {
-    setIsRecording(false);
-    setHasRecording(true);
-    
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     }
-    
-    onRecordingComplete();
-    console.log("Recording stopped");
   };
 
   const togglePlayback = () => {
-    setIsPlaying(!isPlaying);
-    // Simulate playback for demo
-    if (!isPlaying) {
-      setTimeout(() => setIsPlaying(false), 3000);
+    if (!audioBlob) return;
+    
+    if (!audioRef.current) {
+      audioRef.current = new Audio(URL.createObjectURL(audioBlob));
+      audioRef.current.onended = () => setIsPlaying(false);
+    }
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsPlaying(true);
     }
   };
 
