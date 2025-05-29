@@ -4,27 +4,14 @@ import { Footer } from "../components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Heart, Shield, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 
 const About = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState({ name: "User", email: "user@example.com" });
-
-  useEffect(() => {
-    const userEmail = localStorage.getItem('userEmail');
-    const userName = localStorage.getItem('userName');
-    setCurrentUser({
-      name: userName || "User",
-      email: userEmail || "user@example.com"
-    });
-  }, []);
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('lastVisit');
-    localStorage.removeItem('userEntries');
+    logout();
     navigate('/');
   };
 
@@ -58,7 +45,7 @@ const About = () => {
           onNewEntry={() => navigate('/')}
           onSettings={() => {}}
           onLogout={handleLogout}
-          currentUser={currentUser}
+          currentUser={user || { name: "User", email: "user@example.com" }}
         />
         
         <main className="mt-8">

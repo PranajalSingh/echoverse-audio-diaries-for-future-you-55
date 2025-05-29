@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Music, Timer, Headphones, Home, BarChart3, Info, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -16,53 +17,69 @@ import {
 } from "@/components/ui/navigation-menu";
 
 interface WelcomeScreenProps {
-  onLogin: (email: string, password: string, name?: string) => boolean;
+  onLogin: (email: string, password: string) => Promise<boolean>;
 }
 
 export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
+  const { register } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     // Validation
     if (!email || !password) {
       setError("Please fill in all fields");
+      setIsLoading(false);
       return;
     }
 
     if (!email.includes('@')) {
       setError("Please enter a valid email address");
+      setIsLoading(false);
       return;
     }
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
+      setIsLoading(false);
       return;
     }
 
     if (isSignUp) {
       if (!name.trim()) {
         setError("Please enter your name");
+        setIsLoading(false);
         return;
       }
       if (password !== confirmPassword) {
         setError("Passwords do not match");
+        setIsLoading(false);
         return;
+      }
+
+      // Handle registration
+      const success = await register(email, password, name);
+      if (!success) {
+        setError("An account with this email already exists");
+      }
+    } else {
+      // Handle login
+      const success = await onLogin(email, password);
+      if (!success) {
+        setError("Invalid email or password");
       }
     }
 
-    // Attempt login/signup
-    const success = onLogin(email, password, isSignUp ? name : undefined);
-    if (!success) {
-      setError("Invalid credentials. Please try again.");
-    }
+    setIsLoading(false);
   };
 
   return (
@@ -79,46 +96,6 @@ export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
               <p className="text-purple-200 text-sm">Your Audio Timeline</p>
             </div>
           </Link>
-
-          <NavigationMenu>
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <Link to="/">
-                  <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                    <Home className="w-4 h-4 mr-2" />
-                    Home
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-              
-              <NavigationMenuItem>
-                <Link to="/dashboard">
-                  <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Dashboard
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-
-              <NavigationMenuItem>
-                <Link to="/about">
-                  <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                    <Info className="w-4 h-4 mr-2" />
-                    About
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-
-              <NavigationMenuItem>
-                <Link to="/contact">
-                  <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white focus:outline-none disabled:pointer-events-none disabled:opacity-50">
-                    <Mail className="w-4 h-4 mr-2" />
-                    Contact
-                  </NavigationMenuLink>
-                </Link>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
         </div>
       </header>
 
@@ -191,6 +168,7 @@ export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
                         onChange={(e) => setEmail(e.target.value)}
                         className="bg-white/10 border-white/20 text-white placeholder:text-purple-200"
                         required
+                        disabled={isLoading}
                       />
                       <Input
                         type="password"
@@ -199,9 +177,10 @@ export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
                         onChange={(e) => setPassword(e.target.value)}
                         className="bg-white/10 border-white/20 text-white placeholder:text-purple-200"
                         required
+                        disabled={isLoading}
                       />
-                      <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700">
-                        Sign In
+                      <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
+                        {isLoading ? "Signing In..." : "Sign In"}
                       </Button>
                     </form>
                   </TabsContent>
@@ -215,6 +194,7 @@ export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
                         onChange={(e) => setName(e.target.value)}
                         className="bg-white/10 border-white/20 text-white placeholder:text-purple-200"
                         required
+                        disabled={isLoading}
                       />
                       <Input
                         type="email"
@@ -223,6 +203,7 @@ export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
                         onChange={(e) => setEmail(e.target.value)}
                         className="bg-white/10 border-white/20 text-white placeholder:text-purple-200"
                         required
+                        disabled={isLoading}
                       />
                       <Input
                         type="password"
@@ -231,6 +212,7 @@ export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
                         onChange={(e) => setPassword(e.target.value)}
                         className="bg-white/10 border-white/20 text-white placeholder:text-purple-200"
                         required
+                        disabled={isLoading}
                       />
                       <Input
                         type="password"
@@ -239,9 +221,10 @@ export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         className="bg-white/10 border-white/20 text-white placeholder:text-purple-200"
                         required
+                        disabled={isLoading}
                       />
-                      <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700">
-                        Create Account
+                      <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
+                        {isLoading ? "Creating Account..." : "Create Account"}
                       </Button>
                     </form>
                   </TabsContent>

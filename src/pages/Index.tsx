@@ -5,10 +5,11 @@ import { TimelineView } from "../components/TimelineView";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { NewEntryModal } from "../components/NewEntryModal";
-import { WelcomeScreen } from "../components/WelcomeScreen";
 import { AudioPlaybackModal } from "../components/AudioPlaybackModal";
 import { NotificationBanner } from "../components/NotificationBanner";
 import { SettingsModal } from "../components/SettingsModal";
+import { useAuth } from "../contexts/AuthContext";
+import { UserDataManager } from "../utils/userDataManager";
 
 export interface Entry {
   id: string;
@@ -20,66 +21,50 @@ export interface Entry {
   audioUrl: string | null;
   audioBlob?: Blob;
   reflection?: string;
+  userId: string; // Add userId to ensure privacy
 }
 
 const Index = () => {
+  const { user, logout } = useAuth();
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [playingEntry, setPlayingEntry] = useState<Entry | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('isAuthenticated') === 'true';
-  });
   const [timeCapsuleMode, setTimeCapsuleMode] = useState(false);
   const [lastVisit, setLastVisit] = useState<string | null>(null);
-  const [entries, setEntries] = useState<Entry[]>(() => {
-    const savedEntries = localStorage.getItem('userEntries');
-    return savedEntries ? JSON.parse(savedEntries) : [];
-  });
+  const [entries, setEntries] = useState<Entry[]>([]);
 
-  // Get current user from localStorage
-  const getCurrentUser = () => {
-    const userEmail = localStorage.getItem('userEmail');
-    const userName = localStorage.getItem('userName');
-    return {
-      name: userName || "User",
-      email: userEmail || "user@example.com"
-    };
-  };
-
-  const [currentUser, setCurrentUser] = useState(getCurrentUser);
-
-  // Check for newly unlocked entries on component mount
+  // Load user-specific data when user changes
   useEffect(() => {
-    if (isAuthenticated) {
-      const now = new Date();
-      const storedLastVisit = localStorage.getItem('lastVisit');
+    if (user) {
+      const userEntries = UserDataManager.getUserEntries(user.id);
+      const userLastVisit = UserDataManager.getUserLastVisit(user.id);
       
-      if (storedLastVisit) {
-        setLastVisit(storedLastVisit);
-      }
+      setEntries(userEntries);
+      setLastVisit(userLastVisit);
       
       // Update unlock status for entries
-      setEntries(prevEntries => 
-        prevEntries.map(entry => ({
-          ...entry,
-          isUnlocked: new Date(entry.unlockDate) <= now && !timeCapsuleMode
-        }))
-      );
+      const now = new Date();
+      const updatedEntries = userEntries.map(entry => ({
+        ...entry,
+        isUnlocked: new Date(entry.unlockDate) <= now && !timeCapsuleMode
+      }));
+      
+      if (JSON.stringify(updatedEntries) !== JSON.stringify(userEntries)) {
+        setEntries(updatedEntries);
+        UserDataManager.saveUserEntries(user.id, updatedEntries);
+      }
       
       // Update last visit timestamp
-      localStorage.setItem('lastVisit', now.toISOString());
-      
-      // Update current user data
-      setCurrentUser(getCurrentUser());
+      UserDataManager.saveUserLastVisit(user.id, now.toISOString());
     }
-  }, [isAuthenticated, timeCapsuleMode]);
+  }, [user, timeCapsuleMode]);
 
-  // Save entries to localStorage whenever entries change
+  // Save entries to storage whenever entries change
   useEffect(() => {
-    if (isAuthenticated) {
-      localStorage.setItem('userEntries', JSON.stringify(entries));
+    if (user && entries.length > 0) {
+      UserDataManager.saveUserEntries(user.id, entries);
     }
-  }, [entries, isAuthenticated]);
+  }, [entries, user]);
 
   // Check for newly unlocked entries
   const getNewlyUnlockedEntries = () => {
@@ -94,27 +79,13 @@ const Index = () => {
     });
   };
 
-  const handleLogin = (email: string, password: string, name?: string) => {
-    // Simple validation for demo purposes
-    if (email && password && email.includes('@') && password.length >= 6) {
-      setIsAuthenticated(true);
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', email);
-      
-      // Extract name from email if not provided, or use provided name
-      const userName = name || email.split('@')[0];
-      localStorage.setItem('userName', userName);
-      
-      setCurrentUser({ name: userName, email });
-      return true;
-    }
-    return false;
-  };
-
-  const handleSaveEntry = (newEntry: Omit<Entry, 'id'>) => {
+  const handleSaveEntry = (newEntry: Omit<Entry, 'id' | 'userId'>) => {
+    if (!user) return;
+    
     const entry: Entry = {
       ...newEntry,
-      id: Date.now().toString(),
+      id: `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId: user.id,
       isUnlocked: new Date(newEntry.unlockDate) <= new Date() && !timeCapsuleMode
     };
     
@@ -123,43 +94,47 @@ const Index = () => {
   };
 
   const handlePlayEntry = (entry: Entry) => {
-    if (entry.isUnlocked) {
-      setPlayingEntry(entry);
+    // Security check: ensure user can only play their own entries
+    if (entry.userId !== user?.id || !entry.isUnlocked) {
+      console.warn('Unauthorized access attempt to entry:', entry.id);
+      return;
     }
+    setPlayingEntry(entry);
   };
 
   const handleSaveReflection = (entryId: string, reflection: string) => {
+    if (!user) return;
+    
     setEntries(prev => 
-      prev.map(entry => 
-        entry.id === entryId 
-          ? { ...entry, reflection }
-          : entry
-      )
+      prev.map(entry => {
+        // Security check: ensure user can only modify their own entries
+        if (entry.id === entryId && entry.userId === user.id) {
+          return { ...entry, reflection };
+        }
+        return entry;
+      })
     );
   };
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('lastVisit');
-    localStorage.removeItem('userEntries');
+    logout();
     setEntries([]);
-    setCurrentUser({ name: "User", email: "user@example.com" });
+    setLastVisit(null);
+    setShowNewEntry(false);
+    setShowSettings(false);
+    setPlayingEntry(null);
   };
 
+  // Filter entries to show only user's entries (additional security layer)
+  const userEntries = entries.filter(entry => entry.userId === user?.id);
+
   const filteredEntries = timeCapsuleMode 
-    ? entries.filter(entry => {
+    ? userEntries.filter(entry => {
         const oneYearFromCreation = new Date(entry.recordedDate);
         oneYearFromCreation.setFullYear(oneYearFromCreation.getFullYear() + 1);
         return oneYearFromCreation <= new Date();
       })
-    : entries;
-
-  if (!isAuthenticated) {
-    return <WelcomeScreen onLogin={handleLogin} />;
-  }
+    : userEntries;
 
   const newlyUnlockedEntries = getNewlyUnlockedEntries();
 
@@ -170,7 +145,7 @@ const Index = () => {
           onNewEntry={() => setShowNewEntry(true)}
           onSettings={() => setShowSettings(true)}
           onLogout={handleLogout}
-          currentUser={currentUser}
+          currentUser={user || { name: "User", email: "user@example.com" }}
         />
         
         {newlyUnlockedEntries.length > 0 && (
@@ -204,7 +179,7 @@ const Index = () => {
           />
         )}
 
-        {playingEntry && (
+        {playingEntry && playingEntry.userId === user?.id && (
           <AudioPlaybackModal
             entry={playingEntry}
             onClose={() => setPlayingEntry(null)}
