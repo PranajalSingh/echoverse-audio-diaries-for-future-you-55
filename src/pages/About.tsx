@@ -1,5 +1,5 @@
-
 import { Header } from "../components/Header";
+import { Footer } from "../components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Heart, Shield, Sparkles } from "lucide-react";
 
@@ -37,8 +37,8 @@ const About = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
+      <div className="container mx-auto px-4 py-6 flex-1">
         <Header 
           onNewEntry={() => {}}
           onSettings={() => {}}
@@ -80,6 +80,7 @@ const About = () => {
           </div>
         </main>
       </div>
+      <Footer />
     </div>
   );
 };

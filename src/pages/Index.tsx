@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { AudioRecorder } from "../components/AudioRecorder";
 import { TimelineView } from "../components/TimelineView";
 import { Header } from "../components/Header";
+import { Footer } from "../components/Footer";
 import { NewEntryModal } from "../components/NewEntryModal";
 import { WelcomeScreen } from "../components/WelcomeScreen";
 import { AudioPlaybackModal } from "../components/AudioPlaybackModal";
@@ -24,7 +26,10 @@ const Index = () => {
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [playingEntry, setPlayingEntry] = useState<Entry | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Check localStorage for authentication state
+    return localStorage.getItem('isAuthenticated') === 'true';
+  });
   const [timeCapsuleMode, setTimeCapsuleMode] = useState(false);
   const [lastVisit, setLastVisit] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([
@@ -98,6 +103,17 @@ const Index = () => {
     });
   };
 
+  const handleLogin = (email: string, password: string) => {
+    // Simple validation for demo purposes
+    if (email && password && email.includes('@') && password.length >= 6) {
+      setIsAuthenticated(true);
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userEmail', email);
+      return true;
+    }
+    return false;
+  };
+
   const handleSaveEntry = (newEntry: Omit<Entry, 'id'>) => {
     const entry: Entry = {
       ...newEntry,
@@ -127,7 +143,8 @@ const Index = () => {
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    // Clear any stored data if needed
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userEmail');
     localStorage.removeItem('lastVisit');
   };
 
@@ -140,14 +157,14 @@ const Index = () => {
     : entries;
 
   if (!isAuthenticated) {
-    return <WelcomeScreen onLogin={() => setIsAuthenticated(true)} />;
+    return <WelcomeScreen onLogin={handleLogin} />;
   }
 
   const newlyUnlockedEntries = getNewlyUnlockedEntries();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
+      <div className="container mx-auto px-4 py-6 flex-1">
         <Header 
           onNewEntry={() => setShowNewEntry(true)}
           onSettings={() => setShowSettings(true)}
@@ -194,6 +211,7 @@ const Index = () => {
           />
         )}
       </div>
+      <Footer />
     </div>
   );
 };
