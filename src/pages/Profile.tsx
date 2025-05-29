@@ -11,6 +11,7 @@ const Profile = () => {
   const currentUser = {
     name: "John Doe",
     email: "john@example.com",
+    avatar: undefined, // Add the missing avatar property
     joinDate: "January 2024",
     totalEntries: 12,
     unlockedEntries: 8
