@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AudioRecorder } from "./AudioRecorder";
 import { CalendarIcon } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 import type { Entry } from "../pages/Index";
 
 interface NewEntryModalProps {
@@ -27,13 +28,14 @@ const MOOD_OPTIONS = [
 ];
 
 export const NewEntryModal = ({ onClose, onSave }: NewEntryModalProps) => {
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [selectedMood, setSelectedMood] = useState("");
   const [unlockDate, setUnlockDate] = useState("");
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
   const handleSave = () => {
-    if (!title || !selectedMood || !unlockDate || !audioBlob) {
+    if (!title || !selectedMood || !unlockDate || !audioBlob || !user) {
       return;
     }
 
@@ -45,6 +47,7 @@ export const NewEntryModal = ({ onClose, onSave }: NewEntryModalProps) => {
       isUnlocked: new Date(unlockDate) <= new Date(),
       audioUrl: null,
       audioBlob,
+      userId: user.id,
     };
 
     onSave(entry);
