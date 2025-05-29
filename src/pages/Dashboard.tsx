@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
+import { Layout } from "../components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Calendar, Clock, Headphones, Plus } from "lucide-react";
@@ -11,7 +10,7 @@ import type { Entry } from "./Index";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
 
   useEffect(() => {
@@ -20,11 +19,6 @@ const Dashboard = () => {
       setEntries(userEntries);
     }
   }, [user]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   const handleGoHome = () => {
     navigate('/');
@@ -110,120 +104,108 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
-      <div className="container mx-auto px-4 py-6 flex-1">
-        <Header 
-          onNewEntry={handleGoHome}
-          onSettings={() => {}}
-          onLogout={handleLogout}
-          currentUser={user}
-        />
-        
-        <main className="mt-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-            <p className="text-purple-200">Overview of your audio diary journey</p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-            {stats.map((stat) => (
-              <Card key={stat.title} className="bg-white/10 border-white/20 text-white">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {stat.title}
-                  </CardTitle>
-                  <stat.icon className="h-4 w-4 text-purple-300" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
-                  <p className="text-xs text-purple-200">
-                    {stat.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {totalEntries === 0 ? (
-            // New user experience
-            <div className="text-center py-12">
-              <div className="bg-white/5 rounded-lg p-8 border border-white/10 max-w-2xl mx-auto">
-                <Headphones className="w-16 h-16 text-purple-300 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-white mb-4">Welcome to EchoVerse!</h2>
-                <p className="text-purple-200 mb-6">
-                  You haven't created any audio diary entries yet. Start your journey by recording your first thoughts, memories, or dreams to unlock in the future.
-                </p>
-                <Button
-                  onClick={handleGoHome}
-                  className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Your First Entry
-                </Button>
-              </div>
-            </div>
-          ) : (
-            // Existing user experience
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card className="bg-white/10 border-white/20 text-white">
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription className="text-purple-200">
-                    Your latest diary entries
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {recentEntries.length > 0 ? (
-                    <div className="space-y-4">
-                      {recentEntries.map((entry) => (
-                        <div key={entry.id} className="flex items-center space-x-4">
-                          <div className={`w-2 h-2 rounded-full ${entry.isUnlocked ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{entry.title}</p>
-                            <p className="text-xs text-purple-200">
-                              {entry.isUnlocked ? 'Available' : 'Locked'} • {formatDate(entry.recordedDate)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-purple-200 text-sm">No entries yet</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/10 border-white/20 text-white">
-                <CardHeader>
-                  <CardTitle>Upcoming Unlocks</CardTitle>
-                  <CardDescription className="text-purple-200">
-                    Entries waiting to be revealed
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {upcomingUnlocks.length > 0 ? (
-                    <div className="space-y-4">
-                      {upcomingUnlocks.map((entry) => (
-                        <div key={entry.id} className="flex items-center space-x-4">
-                          <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{entry.title}</p>
-                            <p className="text-xs text-purple-200">{getTimeUntilUnlock(entry.unlockDate)}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-purple-200 text-sm">All entries are unlocked</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </main>
+    <Layout onNewEntry={handleGoHome} showFooter={true}>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
+        <p className="text-purple-200">Overview of your audio diary journey</p>
       </div>
-      <Footer />
-    </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        {stats.map((stat) => (
+          <Card key={stat.title} className="bg-white/10 border-white/20 text-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {stat.title}
+              </CardTitle>
+              <stat.icon className="h-4 w-4 text-purple-300" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <p className="text-xs text-purple-200">
+                {stat.description}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {totalEntries === 0 ? (
+        // New user experience
+        <div className="text-center py-12">
+          <div className="bg-white/5 rounded-lg p-8 border border-white/10 max-w-2xl mx-auto">
+            <Headphones className="w-16 h-16 text-purple-300 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-4">Welcome to EchoVerse!</h2>
+            <p className="text-purple-200 mb-6">
+              You haven't created any audio diary entries yet. Start your journey by recording your first thoughts, memories, or dreams to unlock in the future.
+            </p>
+            <Button
+              onClick={handleGoHome}
+              className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Create Your First Entry
+            </Button>
+          </div>
+        </div>
+      ) : (
+        // Existing user experience
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="bg-white/10 border-white/20 text-white">
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription className="text-purple-200">
+                Your latest diary entries
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recentEntries.length > 0 ? (
+                <div className="space-y-4">
+                  {recentEntries.map((entry) => (
+                    <div key={entry.id} className="flex items-center space-x-4">
+                      <div className={`w-2 h-2 rounded-full ${entry.isUnlocked ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{entry.title}</p>
+                        <p className="text-xs text-purple-200">
+                          {entry.isUnlocked ? 'Available' : 'Locked'} • {formatDate(entry.recordedDate)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-purple-200 text-sm">No entries yet</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/10 border-white/20 text-white">
+            <CardHeader>
+              <CardTitle>Upcoming Unlocks</CardTitle>
+              <CardDescription className="text-purple-200">
+                Entries waiting to be revealed
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {upcomingUnlocks.length > 0 ? (
+                <div className="space-y-4">
+                  {upcomingUnlocks.map((entry) => (
+                    <div key={entry.id} className="flex items-center space-x-4">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{entry.title}</p>
+                        <p className="text-xs text-purple-200">{getTimeUntilUnlock(entry.unlockDate)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-purple-200 text-sm">All entries are unlocked</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </Layout>
   );
 };
 
