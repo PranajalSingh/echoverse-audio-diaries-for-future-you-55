@@ -16,12 +16,13 @@ import {
 } from "@/components/ui/navigation-menu";
 
 interface WelcomeScreenProps {
-  onLogin: (email: string, password: string) => boolean;
+  onLogin: (email: string, password: string, name?: string) => boolean;
 }
 
 export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
@@ -46,13 +47,19 @@ export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
       return;
     }
 
-    if (isSignUp && password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
+    if (isSignUp) {
+      if (!name.trim()) {
+        setError("Please enter your name");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
     }
 
-    // Attempt login
-    const success = onLogin(email, password);
+    // Attempt login/signup
+    const success = onLogin(email, password, isSignUp ? name : undefined);
     if (!success) {
       setError("Invalid credentials. Please try again.");
     }
@@ -201,6 +208,14 @@ export const WelcomeScreen = ({ onLogin }: WelcomeScreenProps) => {
                   
                   <TabsContent value="register">
                     <form onSubmit={handleSubmit} className="space-y-4">
+                      <Input
+                        type="text"
+                        placeholder="Full Name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="bg-white/10 border-white/20 text-white placeholder:text-purple-200"
+                        required
+                      />
                       <Input
                         type="email"
                         placeholder="Email"

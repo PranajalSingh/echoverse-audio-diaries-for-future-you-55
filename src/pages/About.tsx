@@ -1,16 +1,31 @@
+
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Heart, Shield, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 const About = () => {
-  const currentUser = {
-    name: "John Doe",
-    email: "john@example.com"
-  };
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState({ name: "User", email: "user@example.com" });
+
+  useEffect(() => {
+    const userEmail = localStorage.getItem('userEmail');
+    const userName = localStorage.getItem('userName');
+    setCurrentUser({
+      name: userName || "User",
+      email: userEmail || "user@example.com"
+    });
+  }, []);
 
   const handleLogout = () => {
-    console.log("Logout clicked");
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('lastVisit');
+    localStorage.removeItem('userEntries');
+    navigate('/');
   };
 
   const features = [
@@ -40,7 +55,7 @@ const About = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
       <div className="container mx-auto px-4 py-6 flex-1">
         <Header 
-          onNewEntry={() => {}}
+          onNewEntry={() => navigate('/')}
           onSettings={() => {}}
           onLogout={handleLogout}
           currentUser={currentUser}

@@ -27,45 +27,26 @@ const Index = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [playingEntry, setPlayingEntry] = useState<Entry | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Check localStorage for authentication state
     return localStorage.getItem('isAuthenticated') === 'true';
   });
   const [timeCapsuleMode, setTimeCapsuleMode] = useState(false);
   const [lastVisit, setLastVisit] = useState<string | null>(null);
-  const [entries, setEntries] = useState<Entry[]>([
-    {
-      id: "1",
-      title: "First Day of College",
-      mood: "😄",
-      recordedDate: "2024-01-15",
-      unlockDate: "2025-01-15",
-      isUnlocked: false,
-      audioUrl: null,
-    },
-    {
-      id: "2", 
-      title: "Summer Reflections",
-      mood: "😌",
-      recordedDate: "2024-06-20",
-      unlockDate: "2024-12-20",
-      isUnlocked: true,
-      audioUrl: "/placeholder-audio.mp3",
-    },
-    {
-      id: "3",
-      title: "New Year Hopes",
-      mood: "✨",
-      recordedDate: "2024-12-31",
-      unlockDate: "2025-12-31",
-      isUnlocked: false,
-      audioUrl: null,
-    }
-  ]);
+  const [entries, setEntries] = useState<Entry[]>(() => {
+    const savedEntries = localStorage.getItem('userEntries');
+    return savedEntries ? JSON.parse(savedEntries) : [];
+  });
 
-  const currentUser = {
-    name: "John Doe",
-    email: "john@example.com"
+  // Get current user from localStorage
+  const getCurrentUser = () => {
+    const userEmail = localStorage.getItem('userEmail');
+    const userName = localStorage.getItem('userName');
+    return {
+      name: userName || "User",
+      email: userEmail || "user@example.com"
+    };
   };
+
+  const [currentUser, setCurrentUser] = useState(getCurrentUser);
 
   // Check for newly unlocked entries on component mount
   useEffect(() => {
@@ -87,8 +68,18 @@ const Index = () => {
       
       // Update last visit timestamp
       localStorage.setItem('lastVisit', now.toISOString());
+      
+      // Update current user data
+      setCurrentUser(getCurrentUser());
     }
   }, [isAuthenticated, timeCapsuleMode]);
+
+  // Save entries to localStorage whenever entries change
+  useEffect(() => {
+    if (isAuthenticated) {
+      localStorage.setItem('userEntries', JSON.stringify(entries));
+    }
+  }, [entries, isAuthenticated]);
 
   // Check for newly unlocked entries
   const getNewlyUnlockedEntries = () => {
@@ -103,12 +94,18 @@ const Index = () => {
     });
   };
 
-  const handleLogin = (email: string, password: string) => {
+  const handleLogin = (email: string, password: string, name?: string) => {
     // Simple validation for demo purposes
     if (email && password && email.includes('@') && password.length >= 6) {
       setIsAuthenticated(true);
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userEmail', email);
+      
+      // Extract name from email if not provided, or use provided name
+      const userName = name || email.split('@')[0];
+      localStorage.setItem('userName', userName);
+      
+      setCurrentUser({ name: userName, email });
       return true;
     }
     return false;
@@ -145,7 +142,11 @@ const Index = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
     localStorage.removeItem('lastVisit');
+    localStorage.removeItem('userEntries');
+    setEntries([]);
+    setCurrentUser({ name: "User", email: "user@example.com" });
   };
 
   const filteredEntries = timeCapsuleMode 

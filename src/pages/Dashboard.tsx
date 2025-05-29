@@ -1,51 +1,154 @@
-
+import { useState, useEffect } from "react";
 import { Header } from "../components/Header";
+import { Footer } from "../components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Calendar, Clock, Headphones } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BarChart3, Calendar, Clock, Headphones, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+interface Entry {
+  id: string;
+  title: string;
+  mood: string;
+  recordedDate: string;
+  unlockDate: string;
+  isUnlocked: boolean;
+  audioUrl: string | null;
+  audioBlob?: Blob;
+  reflection?: string;
+}
 
 const Dashboard = () => {
-  const currentUser = {
-    name: "John Doe",
-    email: "john@example.com"
+  const navigate = useNavigate();
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const getCurrentUser = () => {
+    const userEmail = localStorage.getItem('userEmail');
+    const userName = localStorage.getItem('userName');
+    return {
+      name: userName || "User",
+      email: userEmail || "user@example.com"
+    };
   };
 
+  const [currentUser, setCurrentUser] = useState(getCurrentUser());
+
+  useEffect(() => {
+    const authStatus = localStorage.getItem('isAuthenticated') === 'true';
+    setIsAuthenticated(authStatus);
+    
+    if (!authStatus) {
+      navigate('/');
+      return;
+    }
+
+    // Load user entries
+    const savedEntries = localStorage.getItem('userEntries');
+    if (savedEntries) {
+      setEntries(JSON.parse(savedEntries));
+    }
+
+    setCurrentUser(getCurrentUser());
+  }, [navigate]);
+
   const handleLogout = () => {
-    // Will be implemented with authentication
-    console.log("Logout clicked");
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('lastVisit');
+    localStorage.removeItem('userEntries');
+    navigate('/');
   };
+
+  const handleGoHome = () => {
+    navigate('/');
+  };
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  const totalEntries = entries.length;
+  const unlockedEntries = entries.filter(entry => entry.isUnlocked).length;
+  const lockedEntries = totalEntries - unlockedEntries;
+  
+  // Get entries from this month
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const thisMonthEntries = entries.filter(entry => {
+    const entryDate = new Date(entry.recordedDate);
+    return entryDate.getMonth() === currentMonth && entryDate.getFullYear() === currentYear;
+  }).length;
 
   const stats = [
     {
       title: "Total Entries",
-      value: "12",
+      value: totalEntries.toString(),
       description: "Audio diary entries recorded",
       icon: Headphones,
     },
     {
       title: "Unlocked",
-      value: "8",
+      value: unlockedEntries.toString(),
       description: "Entries available to play",
       icon: Calendar,
     },
     {
       title: "Locked",
-      value: "4",
+      value: lockedEntries.toString(),
       description: "Future entries waiting",
       icon: Clock,
     },
     {
       title: "This Month",
-      value: "3",
+      value: thisMonthEntries.toString(),
       description: "New entries recorded",
       icon: BarChart3,
     },
   ];
 
+  // Get recent entries (last 5)
+  const recentEntries = entries
+    .sort((a, b) => new Date(b.recordedDate).getTime() - new Date(a.recordedDate).getTime())
+    .slice(0, 5);
+
+  // Get upcoming unlocks
+  const upcomingUnlocks = entries
+    .filter(entry => !entry.isUnlocked)
+    .sort((a, b) => new Date(a.unlockDate).getTime() - new Date(b.unlockDate).getTime())
+    .slice(0, 5);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getTimeUntilUnlock = (unlockDate: string) => {
+    const now = new Date();
+    const unlock = new Date(unlockDate);
+    const diffTime = unlock.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 0) return "Available now";
+    if (diffDays === 1) return "Unlocks tomorrow";
+    if (diffDays < 30) return `Unlocks in ${diffDays} days`;
+    if (diffDays < 365) {
+      const months = Math.ceil(diffDays / 30);
+      return `Unlocks in ${months} month${months > 1 ? 's' : ''}`;
+    }
+    const years = Math.ceil(diffDays / 365);
+    return `Unlocks in ${years} year${years > 1 ? 's' : ''}`;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
+      <div className="container mx-auto px-4 py-6 flex-1">
         <Header 
-          onNewEntry={() => {}}
+          onNewEntry={handleGoHome}
           onSettings={() => {}}
           onLogout={handleLogout}
           currentUser={currentUser}
@@ -76,63 +179,85 @@ const Dashboard = () => {
             ))}
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="bg-white/10 border-white/20 text-white">
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription className="text-purple-200">
-                  Your latest diary entries
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Summer Reflections unlocked</p>
-                      <p className="text-xs text-purple-200">2 days ago</p>
+          {totalEntries === 0 ? (
+            // New user experience
+            <div className="text-center py-12">
+              <div className="bg-white/5 rounded-lg p-8 border border-white/10 max-w-2xl mx-auto">
+                <Headphones className="w-16 h-16 text-purple-300 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-white mb-4">Welcome to EchoVerse!</h2>
+                <p className="text-purple-200 mb-6">
+                  You haven't created any audio diary entries yet. Start your journey by recording your first thoughts, memories, or dreams to unlock in the future.
+                </p>
+                <Button
+                  onClick={handleGoHome}
+                  className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Your First Entry
+                </Button>
+              </div>
+            </div>
+          ) : (
+            // Existing user experience
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="bg-white/10 border-white/20 text-white">
+                <CardHeader>
+                  <CardTitle>Recent Activity</CardTitle>
+                  <CardDescription className="text-purple-200">
+                    Your latest diary entries
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {recentEntries.length > 0 ? (
+                    <div className="space-y-4">
+                      {recentEntries.map((entry) => (
+                        <div key={entry.id} className="flex items-center space-x-4">
+                          <div className={`w-2 h-2 rounded-full ${entry.isUnlocked ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{entry.title}</p>
+                            <p className="text-xs text-purple-200">
+                              {entry.isUnlocked ? 'Available' : 'Locked'} • {formatDate(entry.recordedDate)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">New Year Hopes recorded</p>
-                      <p className="text-xs text-purple-200">1 week ago</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  ) : (
+                    <p className="text-purple-200 text-sm">No entries yet</p>
+                  )}
+                </CardContent>
+              </Card>
 
-            <Card className="bg-white/10 border-white/20 text-white">
-              <CardHeader>
-                <CardTitle>Upcoming Unlocks</CardTitle>
-                <CardDescription className="text-purple-200">
-                  Entries waiting to be revealed
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">First Day of College</p>
-                      <p className="text-xs text-purple-200">Unlocks in 6 months</p>
+              <Card className="bg-white/10 border-white/20 text-white">
+                <CardHeader>
+                  <CardTitle>Upcoming Unlocks</CardTitle>
+                  <CardDescription className="text-purple-200">
+                    Entries waiting to be revealed
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {upcomingUnlocks.length > 0 ? (
+                    <div className="space-y-4">
+                      {upcomingUnlocks.map((entry) => (
+                        <div key={entry.id} className="flex items-center space-x-4">
+                          <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{entry.title}</p>
+                            <p className="text-xs text-purple-200">{getTimeUntilUnlock(entry.unlockDate)}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">New Year Hopes</p>
-                      <p className="text-xs text-purple-200">Unlocks in 11 months</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  ) : (
+                    <p className="text-purple-200 text-sm">All entries are unlocked</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </main>
       </div>
+      <Footer />
     </div>
   );
 };
