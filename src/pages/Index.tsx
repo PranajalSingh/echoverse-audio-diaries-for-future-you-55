@@ -1,13 +1,9 @@
-
 import { useState, useEffect } from "react";
-import { AudioRecorder } from "../components/AudioRecorder";
 import { TimelineView } from "../components/TimelineView";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { NewEntryModal } from "../components/NewEntryModal";
 import { AudioPlaybackModal } from "../components/AudioPlaybackModal";
 import { NotificationBanner } from "../components/NotificationBanner";
-import { SettingsModal } from "../components/SettingsModal";
+import { Layout } from "../components/Layout";
 import { useAuth } from "../contexts/AuthContext";
 import { UserDataManager } from "../utils/userDataManager";
 
@@ -29,7 +25,6 @@ export interface Entry {
 const Index = () => {
   const { user, logout } = useAuth();
   const [showNewEntry, setShowNewEntry] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [playingEntry, setPlayingEntry] = useState<Entry | null>(null);
   const [timeCapsuleMode, setTimeCapsuleMode] = useState(false);
   const [lastVisit, setLastVisit] = useState<string | null>(null);
@@ -142,15 +137,6 @@ const Index = () => {
     );
   };
 
-  const handleLogout = () => {
-    logout();
-    setEntries([]);
-    setLastVisit(null);
-    setShowNewEntry(false);
-    setShowSettings(false);
-    setPlayingEntry(null);
-  };
-
   // Filter entries to show only user's entries (additional security layer)
   const userEntries = entries.filter(entry => entry.userId === user?.id);
 
@@ -165,58 +151,37 @@ const Index = () => {
   const newlyUnlockedEntries = getNewlyUnlockedEntries();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1">
-        <Header 
-          onNewEntry={() => setShowNewEntry(true)}
-          onSettings={() => setShowSettings(true)}
-          onLogout={handleLogout}
-          currentUser={user || { name: "User", email: "user@example.com" }}
-        />
-        
-        {newlyUnlockedEntries.length > 0 && (
-          <div className="mt-4 sm:mt-6">
-            <NotificationBanner 
-              entries={newlyUnlockedEntries}
-              onPlayEntry={handlePlayEntry}
-            />
-          </div>
-        )}
-        
-        <main className="mt-6 sm:mt-8">
-          <TimelineView 
-            entries={filteredEntries}
+    <Layout onNewEntry={() => setShowNewEntry(true)} showFooter={true}>
+      {newlyUnlockedEntries.length > 0 && (
+        <div className="mb-4 sm:mb-6">
+          <NotificationBanner 
+            entries={newlyUnlockedEntries}
             onPlayEntry={handlePlayEntry}
-            timeCapsuleMode={timeCapsuleMode}
           />
-        </main>
+        </div>
+      )}
+      
+      <TimelineView 
+        entries={filteredEntries}
+        onPlayEntry={handlePlayEntry}
+        timeCapsuleMode={timeCapsuleMode}
+      />
 
-        {showNewEntry && (
-          <NewEntryModal 
-            onClose={() => setShowNewEntry(false)}
-            onSave={handleSaveEntry}
-          />
-        )}
+      {showNewEntry && (
+        <NewEntryModal 
+          onClose={() => setShowNewEntry(false)}
+          onSave={handleSaveEntry}
+        />
+      )}
 
-        {showSettings && (
-          <SettingsModal
-            isOpen={showSettings}
-            onClose={() => setShowSettings(false)}
-            timeCapsuleMode={timeCapsuleMode}
-            onTimeCapsuleModeChange={setTimeCapsuleMode}
-          />
-        )}
-
-        {playingEntry && playingEntry.userId === user?.id && (
-          <AudioPlaybackModal
-            entry={playingEntry}
-            onClose={() => setPlayingEntry(null)}
-            onSaveReflection={handleSaveReflection}
-          />
-        )}
-      </div>
-      <Footer />
-    </div>
+      {playingEntry && playingEntry.userId === user?.id && (
+        <AudioPlaybackModal
+          entry={playingEntry}
+          onClose={() => setPlayingEntry(null)}
+          onSaveReflection={handleSaveReflection}
+        />
+      )}
+    </Layout>
   );
 };
 
